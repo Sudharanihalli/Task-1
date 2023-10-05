@@ -1,0 +1,212 @@
+
+Fetching and showing all the 100 posts 
+->solved using Springboot project
+
+1.front end part done using html, css, javascript and ajax call
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Data Table</title>
+    <style>
+     
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <table>
+        <thead>
+            <tr>
+                <th>User ID</th>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Body</th>
+            </tr>
+        </thead>
+        <tbody id="data-table-body">
+            <!-- Data will be displayed here -->
+        </tbody>
+    </table>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+           
+            function fetchData() {
+                fetch('https://jsonplaceholder.typicode.com/posts')
+                    .then(response => response.json())
+                    .then(data => {
+                        const tableBody = document.getElementById('data-table-body');
+                        
+                      
+                        tableBody.innerHTML = '';
+                        
+                        
+                        data.forEach(entry => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${entry.userId}</td>
+                                <td>${entry.id}</td>
+                                <td>${entry.title}</td>
+                                <td>${entry.body}</td>
+                            `;
+                            tableBody.appendChild(row);
+                        });
+                    })
+                    .catch(error => console.error('Error fetching data:', error));
+            }
+
+        
+            fetchData();
+        });
+    </script>
+</body>
+</html>
+
+2.Entity layer
+
+@Entity
+public class JsonData {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private Integer userId;
+    private Integer postId;
+    private String title;
+    private String body;
+
+    // Getters and setters
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Integer getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Integer userId) {
+        this.userId = userId;
+    }
+
+    public Integer getPostId() {
+        return postId;
+    }
+
+    public void setPostId(Integer postId) {
+        this.postId = postId;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getBody() {
+        return body;
+    }
+
+    public void setBody(String body) {
+        this.body = body;
+    }
+}
+
+3.Repository layer
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface JsonDataRepository extends JpaRepository<JsonData, Long> {
+    
+}
+
+4.Data loader class
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
+
+@Component
+public class DataLoader {
+    private final JsonDataRepository jsonDataRepository;
+
+    @Autowired
+    public DataLoader(JsonDataRepository jsonDataRepository) {
+        this.jsonDataRepository = jsonDataRepository;
+    }
+
+    public void loadDataFromApi() {
+        String apiUrl = "https://jsonplaceholder.typicode.com/posts";
+        RestTemplate restTemplate = new RestTemplate();
+        JsonData[] jsonDataArray = restTemplate.getForObject(apiUrl, JsonData[].class);
+
+        for (JsonData jsonData : jsonDataArray) {
+            jsonDataRepository.save(jsonData);
+        }
+    }
+}
+
+5.Controller cass
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+
+@Controller
+public class JsonDataController {
+    private final JsonDataRepository jsonDataRepository;
+
+    public JsonDataController(JsonDataRepository jsonDataRepository) {
+        this.jsonDataRepository = jsonDataRepository;
+    }
+
+    @GetMapping("/")
+    public String home(Model model) {
+        // Fetch data from the database
+        Iterable<JsonData> jsonDataList = jsonDataRepository.findAll();
+
+        // Pass the data to the HTML template
+        model.addAttribute("jsonDataList", jsonDataList);
+
+        return "index";
+    }
+}
+
+->Database part
+*CREATE TABLE json_data (
+    userId INT,
+    id INT,
+    title VARCHAR(255),
+    body TEXT
+);
+
+*SELECT * FROM json_data;
+
+->Application.properties
+spring.mvc.view.prefix:/views/
+spring.mvc.view.suffix:.jsp
+spring.datasource.url:jdbc:sqlserver://DESKTOP-E4II4GE:1433;databaseName=Register;encrypt=true;trustServerCertificate=true
+spring.datasource.username:sa
+spring.datasource.password:password
+logging.level.org.hibernate.type.descriptor.sql=trace
+spring.datasource.driverClassName:com.microsoft.sqlserver.jdbc.SQLServerDriver
+spring.jpa.show-sql=true
+spring.jpa.database-platform:org.hibernate.dialect.SQLServerDialect
+spring.jpa.hibernate.ddl-auto=update
+
+
+
+
